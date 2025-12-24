@@ -51,6 +51,7 @@ class ManticoreComparator:
         self.configuration = None
         self.query_log_path = None
         self.select_log_path = None
+        self.ddl_log_path = None
         self.cluster_nodes = cluster_nodes or [
             "http://localhost:9308",
             "http://localhost:9318",
@@ -137,6 +138,9 @@ class ManticoreComparator:
                 with manticoresearch.ApiClient(self.configuration) as api_client:
                     utils_api = manticoresearch.UtilsApi(api_client)
                     create_index_statement = f"CREATE TABLE IF NOT EXISTS {index_name}({schema}) {index_settings}"
+                    if self.ddl_log_path:
+                        with open(self.ddl_log_path, "a") as log_file:
+                            log_file.write(create_index_statement + ";\n")
                     utils_api.sql(create_index_statement, raw_response=True)
                     print(f"Created table {index_name}")
             except ApiException as e:
@@ -166,6 +170,9 @@ class ManticoreComparator:
             with manticoresearch.ApiClient(self.get_config()) as api_client:
                 utils_api = manticoresearch.UtilsApi(api_client)
                 alter_cluster_query = f"ALTER CLUSTER {self.cluster_name} DROP {table_name}"
+                if self.ddl_log_path:
+                    with open(self.ddl_log_path, "a") as log_file:
+                        log_file.write(alter_cluster_query + ";\n")
                 utils_api.sql(alter_cluster_query, raw_response=True)
                 print(f"Successfully removed {table_name} from cluster {self.cluster_name}")
         except ApiException as e:
@@ -180,6 +187,9 @@ class ManticoreComparator:
                 with manticoresearch.ApiClient(self.get_config(node_host)) as api_client:
                     utils_api = manticoresearch.UtilsApi(api_client)
                     drop_query = f"DROP TABLE IF EXISTS {table_name}"
+                    if self.ddl_log_path:
+                        with open(self.ddl_log_path, "a") as log_file:
+                            log_file.write(drop_query + ";\n")
                     utils_api.sql(drop_query, raw_response=True)
                     print(f"Successfully dropped {table_name} on {node_host}")
             except ApiException as e:
@@ -246,7 +256,7 @@ class ManticoreComparator:
     
     def load_data(self, data_path: str, filter_type: Optional[str] = None, 
                   max_rows: Optional[int] = None, index_name: Optional[str] = None,
-                  rebuild_index: bool = False, read_batch_size: int = 100):
+                  rebuild_index: bool = False, read_batch_size: int = 10):
         """
         Load data from JSONL file and index into Manticore.
         
@@ -495,6 +505,9 @@ def main():
         pass
     comparator.select_log_path = "manticore_select_queries.sql"
     with open(comparator.select_log_path, "w"):
+        pass
+    comparator.ddl_log_path = "manticore_ddl_queries.sql"
+    with open(comparator.ddl_log_path, "w"):
         pass
     
     # Load data
