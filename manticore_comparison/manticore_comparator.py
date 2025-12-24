@@ -129,7 +129,7 @@ class ManticoreComparator:
                 hnsw_similarity='COSINE' hnsw_m='{self.hnsw_m}' hnsw_ef_construction='{self.ef_construction}'
             """
             
-            index_settings = "engine='columnar' optimize_cutoff='100'"
+            index_settings = "engine='columnar' optimize_cutoff='100' rt_mem_limit='10240M'"
             
             try:
                 with manticoresearch.ApiClient(self.configuration) as api_client:
