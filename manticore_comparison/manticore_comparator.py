@@ -129,7 +129,7 @@ class ManticoreComparator:
                 hnsw_similarity='COSINE' hnsw_m='{self.hnsw_m}' hnsw_ef_construction='{self.ef_construction}'
             """
             
-            index_settings = "engine='columnar'"
+            index_settings = "engine='columnar' optimize_cutoff='100'"
             
             try:
                 with manticoresearch.ApiClient(self.configuration) as api_client:
@@ -142,24 +142,6 @@ class ManticoreComparator:
                 raise e
             except Exception as e:
                 print(f"Error creating table: {e}")
-                raise
-        
-        # Add to cluster if not already in it
-        if not in_cluster:
-            try:
-                with manticoresearch.ApiClient(self.configuration) as api_client:
-                    utils_api = manticoresearch.UtilsApi(api_client)
-                    utils_api.sql(f"ALTER CLUSTER {self.cluster_name} ADD {index_name}", raw_response=True)
-                    print(f"Added {index_name} to cluster {self.cluster_name}")
-            except ApiException as e:
-                error_msg = str(e)
-                if "already part of cluster" in error_msg.lower():
-                    print(f"Index {index_name} is already part of cluster {self.cluster_name} (ignoring)")
-                else:
-                    print(f"Exception when adding to cluster: {e}")
-                    raise e
-            except Exception as e:
-                print(f"Error adding to cluster: {e}")
                 raise
         
         print(f"DONE: Manticore -> setup schema for {index_name}")
