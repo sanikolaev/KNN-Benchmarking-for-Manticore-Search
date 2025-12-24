@@ -50,6 +50,7 @@ class ManticoreComparator:
         self.index_name = None
         self.configuration = None
         self.query_log_path = None
+        self.select_log_path = None
         self.cluster_nodes = cluster_nodes or [
             "http://localhost:9308",
             "http://localhost:9318",
@@ -379,6 +380,9 @@ class ManticoreComparator:
             ORDER BY score ASC
             LIMIT {k}
         """
+        if self.select_log_path:
+            with open(self.select_log_path, "a") as log_file:
+                log_file.write(query.strip() + ";\n")
         print("Manticore KNN SQL:\n{query}".format(query=query.strip()))
         
         # Run query on each cluster node and merge results
@@ -488,6 +492,9 @@ def main():
     )
     comparator.query_log_path = "manticore_replace_queries.sql"
     with open(comparator.query_log_path, "w"):
+        pass
+    comparator.select_log_path = "manticore_select_queries.sql"
+    with open(comparator.select_log_path, "w"):
         pass
     
     # Load data
