@@ -246,7 +246,7 @@ class ManticoreComparator:
     
     def load_data(self, data_path: str, filter_type: Optional[str] = None, 
                   max_rows: Optional[int] = None, index_name: Optional[str] = None,
-                  rebuild_index: bool = False, read_batch_size: int = 10000):
+                  rebuild_index: bool = False, read_batch_size: int = 100):
         """
         Load data from JSONL file and index into Manticore.
         
