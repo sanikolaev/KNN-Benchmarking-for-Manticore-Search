@@ -209,28 +209,42 @@ class ManticoreComparator:
                            sleep_between_retries: int = 60):
         """Write a chunk of documents to Manticore."""
         configuration = self.get_config()
-        
-        prepared_recs = [
-            {
-                "replace": {
-                    "index": self.index_name,
-                    "cluster": self.cluster_name,
-                    "id": document.pop("id"),
-                    "doc": document,
-                }
-            }
-            for document in chunk
-        ]
+
+        def _sql_escape(value):
+            if value is None:
+                return "NULL"
+            if isinstance(value, (int, float)):
+                return str(value)
+            text = str(value).replace("\\", "\\\\").replace("'", "\\'")
+            return "'" + text + "'"
+
+        def _format_vector(vector):
+            return "(" + ",".join(str(v) for v in vector) + ")"
+
+        values = []
+        for document in chunk:
+            values.append(
+                "({id}, {type}, {timestamp}, {vector})".format(
+                    id=_sql_escape(document.get("id")),
+                    type=_sql_escape(document.get("type", "")),
+                    timestamp=_sql_escape(document.get("timestamp")),
+                    vector=_format_vector(document.get("vector", [])),
+                )
+            )
+
+        insert_sql = "REPLACE INTO {index} (id, type, `timestamp`, vector) VALUES {values}".format(
+            index=self.index_name,
+            values=",".join(values),
+        )
         
         while num_retries:
             try:
                 with manticoresearch.ApiClient(configuration) as api_client:
-                    api_instance = manticoresearch.IndexApi(api_client)
-                    body = "\n".join([json.dumps(doc) for doc in prepared_recs])
+                    utils_api = manticoresearch.UtilsApi(api_client)
                     try:
-                        api_instance.bulk(body)
+                        utils_api.sql(insert_sql, raw_response=True)
                     except ApiException as e:
-                        print(f"Exception when calling IndexApi->bulk: {e}")
+                        print(f"Exception when calling UtilsApi->sql: {e}")
                         raise e
                 break
             except Exception as e:
