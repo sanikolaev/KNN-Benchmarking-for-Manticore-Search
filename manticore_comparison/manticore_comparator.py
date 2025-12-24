@@ -49,6 +49,7 @@ class ManticoreComparator:
         self.ef_search = ef_search
         self.index_name = None
         self.configuration = None
+        self.query_log_path = None
         self.cluster_nodes = cluster_nodes or [
             "http://localhost:9308",
             "http://localhost:9318",
@@ -218,6 +219,10 @@ class ManticoreComparator:
             index=self.index_name,
             values=",".join(values),
         )
+
+        if self.query_log_path:
+            with open(self.query_log_path, "a") as log_file:
+                log_file.write(insert_sql + ";\n")
         
         while num_retries:
             try:
@@ -481,6 +486,9 @@ def main():
         ef_construction=200,
         ef_search=2000
     )
+    comparator.query_log_path = "manticore_replace_queries.sql"
+    with open(comparator.query_log_path, "w"):
+        pass
     
     # Load data
     comparator.load_data(args.data_path, max_rows=args.max_rows, rebuild_index=args.rebuild)
